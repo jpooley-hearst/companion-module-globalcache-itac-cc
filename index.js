@@ -246,6 +246,7 @@ instance.prototype.actions = function(system) {
 						width:   12,
 						default: '1',
 						choices:	[
+							{ id: '2',		label: 'Toggle' },
 							{ id: '1',		label: 'Turn On (Close)' },
 							{ id: '0',		label: 'Turn Off (Open)' }
 						]
@@ -259,11 +260,28 @@ instance.prototype.action = function(action) {
 	var self = this;
 	var cmd  = 'setstate,1:';
 	var opt  = action.options;
+	var enc  = new TextEncoder(); //always utf-8
 
 	switch (action.action) {
 
 		case 'portSet':
-			cmd += opt.portNum + opt.setPort;
+			var portStatus = opt.setPort
+			if(opt.setPort == 2) {
+				debug('Getting current port status from', self.config.host);
+	                 	if (self.socket !== undefined && self.socket.connected) {
+		                	self.socket.send('getstate,1:' + opt.portNum + "\r\n");
+					self.socket.onReceive.addListener(function(info) {
+						var response = enc.encode(info.data)
+						portStatus = parseInt(response.substr(response.length - 1), 10);
+						if (portStatus == 1) { portStatus = 0 }
+						else { portStatus = 1 }
+					});
+					
+	                 	} else {
+		                 	debug('Socket not connected :(');
+		                }
+			}
+			cmd += opt.portNum + portStatus;
 			break;
 
 	}
